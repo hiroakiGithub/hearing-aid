@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>聞こえ補助アプリ</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+h1 {
+  font-size: 22px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.status {
+  font-size: 16px;
+  margin-bottom: 24px;
+  padding: 10px 24px;
+  border-radius: 20px;
+  background: #2a2a4a;
+  text-align: center;
+  min-width: 200px;
+}
+
+.status.active {
+  background: #1b4332;
+  color: #95d5b2;
+}
+
+.status.inactive {
+  background: #3d1f1f;
+  color: #e5a0a0;
+}
+
+.buttons {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 36px;
+}
+
+button {
+  font-size: 18px;
+  font-weight: 600;
+  padding: 16px 40px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+button:disabled {
+  opacity: 0.4;
+  transform: none;
+}
+
+.btn-start {
+  background: #2d6a4f;
+  color: #fff;
+}
+
+.btn-stop {
+  background: #6b2c2c;
+  color: #fff;
+}
+
+.control-section {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 28px;
+}
+
+.control-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.control-label {
+  font-size: 15px;
+  color: #bbb;
+}
+
+.control-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.slider-container {
+  position: relative;
+  width: 100%;
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #3a3a5c;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #5390d9;
+  cursor: pointer;
+}
+
+.nr-slider::-webkit-slider-thumb {
+  background: #7b68ee !important;
+}
+
+.gate-slider::-webkit-slider-thumb {
+  background: #e0a458 !important;
+}
+
+.filter-info {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.level-meter {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.level-label {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.meter-bar {
+  width: 100%;
+  height: 10px;
+  background: #2a2a4a;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #2d6a4f, #52b788, #f4a261, #e76f51);
+  border-radius: 5px;
+  transition: width 0.05s;
+}
+
+.mic-section {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 28px;
+}
+
+.mic-label {
+  font-size: 15px;
+  color: #bbb;
+  margin-bottom: 10px;
+}
+
+.mic-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.mic-select-wrap select {
+  width: 100%;
+  padding: 12px 40px 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #eee;
+  background: #2a2a4a;
+  border: 2px solid #3a3a5c;
+  border-radius: 10px;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+
+.mic-select-wrap select:focus {
+  border-color: #5390d9;
+}
+
+.mic-select-wrap::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #888;
+  pointer-events: none;
+}
+
+.mic-refresh {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: #aaa;
+  background: #2a2a4a;
+  border: 1px solid #3a3a5c;
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mic-refresh:active {
+  background: #3a3a5c;
+}
+
+.mic-info {
+  font-size: 11px;
+  color: #666;
+  margin-top: 6px;
+}
+
+.note {
+  margin-top: 24px;
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+  line-height: 1.6;
+  max-width: 300px;
+}
+
+.error-banner {
+  display: none;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: #4a1a1a;
+  border: 1px solid #6b2c2c;
+  color: #f0a0a0;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.error-banner.show {
+  display: block;
+}
+
+.error-banner a {
+  color: #7cb8ff;
+  text-decoration: underline;
+}
+
+.safari-hint {
+  display: none;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: #1a3a4a;
+  border: 1px solid #2a5a6a;
+  color: #a0d0e0;
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+.safari-hint.show {
+  display: block;
+}
+</style>
+</head>
+<body>
+
+<h1>聞こえ補助</h1>
+<p class="subtitle">マイク音声をイヤホンへ出力します</p>
+
+<div class="error-banner" id="errorBanner"></div>
+<div class="safari-hint" id="safariHint"></div>
+
+<!-- マイク選択 -->
+<div class="mic-section">
+  <div class="mic-label">マイク選択</div>
+  <div class="mic-select-wrap">
+    <select id="micSelect">
+      <option value="">-- 開始ボタンで検出 --</option>
+    </select>
+  </div>
+  <div style="text-align:center">
+    <button class="mic-refresh" onclick="refreshMicList()">マイク一覧を更新</button>
+  </div>
+  <div class="mic-info" id="micInfo">開始後にマイクが検出されます</div>
+</div>
+
+<div class="status inactive" id="status">停止中</div>
+
+<div class="buttons">
+  <button class="btn-start" id="btnStart" onclick="startAudio()">開始</button>
+  <button class="btn-stop" id="btnStop" onclick="stopAudio()" disabled>終了</button>
+</div>
+
+<!-- ボリューム -->
+<div class="control-section">
+  <div class="control-header">
+    <span class="control-label">ボリューム</span>
+    <span class="control-value" id="volumeValue">100%</span>
+  </div>
+  <div class="slider-container">
+    <input type="range" id="volumeSlider" min="0" max="500" value="100" oninput="changeVolume(this.value)">
+  </div>
+</div>
+
+<!-- ノイズ低減 -->
+<div class="control-section">
+  <div class="control-header">
+    <span class="control-label">ノイズ低減</span>
+    <span class="control-value" id="nrValue">中</span>
+  </div>
+  <div class="slider-container">
+    <input type="range" class="nr-slider" id="nrSlider" min="0" max="100" value="50" oninput="changeNoiseReduction(this.value)">
+  </div>
+  <div class="filter-info" id="filterInfo">声を強調 / 低音・高音ノイズをカット</div>
+</div>
+
+<!-- ノイズゲート -->
+<div class="control-section">
+  <div class="control-header">
+    <span class="control-label">ノイズゲート</span>
+    <span class="control-value" id="gateValue">OFF</span>
+  </div>
+  <div class="slider-container">
+    <input type="range" class="gate-slider" id="gateSlider" min="0" max="100" value="0" oninput="changeGate(this.value)">
+  </div>
+  <div class="filter-info">小さな雑音を自動でカットします</div>
+</div>
+
+<div class="level-meter">
+  <div class="level-label">入力レベル</div>
+  <div class="meter-bar">
+    <div class="meter-fill" id="meterFill"></div>
+  </div>
+</div>
+
+<p class="note">
+  ※ イヤホンを接続してご使用ください<br>
+  ※ スピーカー使用時はハウリングにご注意ください<br>
+  ※ iPhoneではSafariで開いてください
+</p>
+
+<script>
+const errorBanner = document.getElementById('errorBanner');
+const safariHint = document.getElementById('safariHint');
+
+function showError(msg) {
+  errorBanner.innerHTML = msg;
+  errorBanner.classList.add('show');
+}
+
+function hideError() {
+  errorBanner.classList.remove('show');
+}
+
+function detectEnvironment() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|OPiOS|EdgiOS/.test(ua) && !/Chrome/.test(ua);
+  const supportsGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+  if (isIOS && !isSafari) {
+    safariHint.innerHTML =
+      '⚠ このアプリはSafariで開く必要があります<br><br>' +
+      '① 下の「Safariで開く」ボタンをタップ<br>' +
+      'または<br>' +
+      '② このファイルをSafariで直接開いてください';
+    safariHint.classList.add('show');
+  }
+
+  if (!supportsGetUserMedia) {
+    showError('このブラウザはマイクAPIに対応していません。<br>Safariで開いてください。');
+  }
+}
+
+detectEnvironment();
+
+let audioCtx = null;
+let micStream = null;
+let sourceNode = null;
+let gainNode = null;
+let boostGainNode = null;
+let compressorNode = null;
+let highpassFilter = null;
+let lowpassFilter = null;
+let speechBoostFilter = null;
+let speechBoostFilter2 = null;
+let gateProcessor = null;
+let analyserNode = null;
+let meterRAF = null;
+
+let gateThreshold = 0;
+let selectedDeviceId = '';
+let isRunning = false;
+
+const btnStart = document.getElementById('btnStart');
+const btnStop = document.getElementById('btnStop');
+const statusEl = document.getElementById('status');
+const volumeSlider = document.getElementById('volumeSlider');
+const volumeValue = document.getElementById('volumeValue');
+const nrSlider = document.getElementById('nrSlider');
+const nrValue = document.getElementById('nrValue');
+const filterInfo = document.getElementById('filterInfo');
+const gateSlider = document.getElementById('gateSlider');
+const gateValue = document.getElementById('gateValue');
+const meterFill = document.getElementById('meterFill');
+const micSelect = document.getElementById('micSelect');
+const micInfo = document.getElementById('micInfo');
+
+// マイク一覧を取得・更新
+async function refreshMicList() {
+  try {
+    // 権限取得のために一度getUserMediaを呼ぶ（ラベル取得に必要）
+    const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    tempStream.getTracks().forEach(t => t.stop());
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter(d => d.kind === 'audioinput');
+
+    const prevValue = micSelect.value;
+    micSelect.innerHTML = '';
+
+    if (audioInputs.length === 0) {
+      micSelect.innerHTML = '<option value="">マイクが見つかりません</option>';
+      micInfo.textContent = 'マイクが検出できませんでした';
+      return;
+    }
+
+    audioInputs.forEach((device, i) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      // iOSではラベルが空の場合がある
+      option.textContent = device.label || ('マイク ' + (i + 1));
+      micSelect.appendChild(option);
+    });
+
+    // 以前の選択を維持、なければデフォルト
+    if (prevValue && [...micSelect.options].some(o => o.value === prevValue)) {
+      micSelect.value = prevValue;
+    }
+
+    selectedDeviceId = micSelect.value;
+    micInfo.textContent = audioInputs.length + '個のマイクを検出しました';
+  } catch (e) {
+    micInfo.textContent = 'マイクの検出に失敗しました';
+    console.error(e);
+  }
+}
+
+// マイク変更時
+micSelect.addEventListener('change', async function() {
+  selectedDeviceId = this.value;
+  // 動作中なら再接続
+  if (isRunning) {
+    await switchMicSource();
+  }
+});
+
+// 動作中にマイクだけ切り替える
+async function switchMicSource() {
+  try {
+    // 古いマイクを停止
+    if (sourceNode) {
+      sourceNode.disconnect();
+      sourceNode = null;
+    }
+    if (micStream) {
+      micStream.getTracks().forEach(t => t.stop());
+      micStream = null;
+    }
+
+    // 新しいマイクで取得
+    const constraints = {
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      }
+    };
+    if (selectedDeviceId) {
+      constraints.audio.deviceId = { exact: selectedDeviceId };
+    }
+
+    micStream = await navigator.mediaDevices.getUserMedia(constraints);
+    sourceNode = audioCtx.createMediaStreamSource(micStream);
+    sourceNode.connect(highpassFilter);
+
+    // 現在使用中のデバイス名を表示
+    const track = micStream.getAudioTracks()[0];
+    micInfo.textContent = '使用中: ' + (track.label || 'マイク');
+  } catch (e) {
+    micInfo.textContent = 'マイクの切替に失敗しました';
+    console.error(e);
+  }
+}
+
+async function startAudio() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+    }
+
+    const constraints = {
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      }
+    };
+    if (selectedDeviceId) {
+      constraints.audio.deviceId = { exact: selectedDeviceId };
+    }
+    micStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+    // マイク一覧を更新（初回起動時にラベルが取得可能になる）
+    await refreshMicList();
+
+    // 使用中デバイス名を表示
+    const activeTrack = micStream.getAudioTracks()[0];
+    micInfo.textContent = '使用中: ' + (activeTrack.label || 'マイク');
+
+    sourceNode = audioCtx.createMediaStreamSource(micStream);
+
+    // ハイパスフィルタ: 低周波ノイズ除去（空調、交通音、ハム音）
+    highpassFilter = audioCtx.createBiquadFilter();
+    highpassFilter.type = 'highpass';
+    highpassFilter.frequency.value = 200;
+    highpassFilter.Q.value = 0.7;
+
+    // ローパスフィルタ: 高周波ノイズ除去（ヒスノイズ）
+    lowpassFilter = audioCtx.createBiquadFilter();
+    lowpassFilter.type = 'lowpass';
+    lowpassFilter.frequency.value = 6000;
+    lowpassFilter.Q.value = 0.7;
+
+    // 音声帯域ブースト1: 基本周波数域（500-1500Hz）
+    speechBoostFilter = audioCtx.createBiquadFilter();
+    speechBoostFilter.type = 'peaking';
+    speechBoostFilter.frequency.value = 1000;
+    speechBoostFilter.Q.value = 1.0;
+    speechBoostFilter.gain.value = 6;
+
+    // 音声帯域ブースト2: 子音の明瞭度（2000-4000Hz）
+    speechBoostFilter2 = audioCtx.createBiquadFilter();
+    speechBoostFilter2.type = 'peaking';
+    speechBoostFilter2.frequency.value = 3000;
+    speechBoostFilter2.Q.value = 1.0;
+    speechBoostFilter2.gain.value = 4;
+
+    // ノイズゲート（ScriptProcessorNode）
+    const bufSize = 4096;
+    gateProcessor = audioCtx.createScriptProcessor(bufSize, 1, 1);
+    gateProcessor.onaudioprocess = function(e) {
+      const input = e.inputBuffer.getChannelData(0);
+      const output = e.outputBuffer.getChannelData(0);
+
+      if (gateThreshold === 0) {
+        // ゲートOFF: そのままパススルー
+        for (let i = 0; i < input.length; i++) {
+          output[i] = input[i];
+        }
+        return;
+      }
+
+      // RMSを計算
+      let sum = 0;
+      for (let i = 0; i < input.length; i++) {
+        sum += input[i] * input[i];
+      }
+      const rms = Math.sqrt(sum / input.length);
+
+      // 閾値（0.001〜0.05の範囲にマッピング）
+      const thresh = gateThreshold / 100 * 0.05;
+
+      if (rms < thresh) {
+        // 閾値以下: ミュート（フェードアウト）
+        for (let i = 0; i < input.length; i++) {
+          const fade = Math.max(0, 1 - (i / (input.length * 0.1)));
+          output[i] = input[i] * fade * (rms / thresh);
+        }
+      } else {
+        for (let i = 0; i < input.length; i++) {
+          output[i] = input[i];
+        }
+      }
+    };
+
+    // コンプレッサー
+    compressorNode = audioCtx.createDynamicsCompressor();
+    compressorNode.threshold.value = -50;
+    compressorNode.knee.value = 40;
+    compressorNode.ratio.value = 12;
+    compressorNode.attack.value = 0.003;
+    compressorNode.release.value = 0.1;
+
+    // ゲイン2段
+    gainNode = audioCtx.createGain();
+    boostGainNode = audioCtx.createGain();
+
+    analyserNode = audioCtx.createAnalyser();
+    analyserNode.fftSize = 256;
+
+    const vol = volumeSlider.value / 100;
+    gainNode.gain.value = Math.min(vol, 5);
+    boostGainNode.gain.value = vol > 5 ? vol / 5 : 1;
+
+    // フィルタ設定を適用
+    applyNoiseReduction(nrSlider.value);
+
+    // チェーン: マイク → ハイパス → ローパス → 音声ブースト1 → 音声ブースト2 → ゲート → コンプレッサー → ゲイン1 → ゲイン2 → 出力
+    sourceNode.connect(highpassFilter);
+    highpassFilter.connect(lowpassFilter);
+    lowpassFilter.connect(speechBoostFilter);
+    speechBoostFilter.connect(speechBoostFilter2);
+    speechBoostFilter2.connect(gateProcessor);
+    gateProcessor.connect(compressorNode);
+    compressorNode.connect(gainNode);
+    gainNode.connect(boostGainNode);
+    boostGainNode.connect(analyserNode);
+    boostGainNode.connect(audioCtx.destination);
+
+    hideError();
+    isRunning = true;
+    btnStart.disabled = true;
+    btnStop.disabled = false;
+    statusEl.textContent = '動作中';
+    statusEl.className = 'status active';
+
+    updateMeter();
+  } catch (e) {
+    console.error(e);
+    const msg = e.name || '';
+    if (msg === 'NotAllowedError') {
+      showError('マイクへのアクセスが拒否されました。<br>ブラウザの設定からマイクの使用を許可してください。');
+    } else if (msg === 'NotFoundError') {
+      showError('マイクが見つかりません。<br>マイクが接続されているか確認してください。');
+    } else if (msg === 'NotSupportedError' || msg === 'TypeError') {
+      showError('このブラウザではマイク機能が使えません。<br>Safariで開いてください。');
+    } else {
+      showError('マイクの起動に失敗しました。<br>(' + (e.message || e.name || '不明なエラー') + ')');
+    }
+  }
+}
+
+function stopAudio() {
+  if (meterRAF) {
+    cancelAnimationFrame(meterRAF);
+    meterRAF = null;
+  }
+
+  if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
+  if (highpassFilter) { highpassFilter.disconnect(); highpassFilter = null; }
+  if (lowpassFilter) { lowpassFilter.disconnect(); lowpassFilter = null; }
+  if (speechBoostFilter) { speechBoostFilter.disconnect(); speechBoostFilter = null; }
+  if (speechBoostFilter2) { speechBoostFilter2.disconnect(); speechBoostFilter2 = null; }
+  if (gateProcessor) { gateProcessor.disconnect(); gateProcessor = null; }
+  if (compressorNode) { compressorNode.disconnect(); compressorNode = null; }
+  if (gainNode) { gainNode.disconnect(); gainNode = null; }
+  if (boostGainNode) { boostGainNode.disconnect(); boostGainNode = null; }
+  if (analyserNode) { analyserNode.disconnect(); analyserNode = null; }
+
+  if (micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+  }
+  if (audioCtx) {
+    audioCtx.close();
+    audioCtx = null;
+  }
+
+  isRunning = false;
+  meterFill.style.width = '0%';
+  btnStart.disabled = false;
+  btnStop.disabled = true;
+  statusEl.textContent = '停止中';
+  statusEl.className = 'status inactive';
+  micInfo.textContent = 'マイクを選択して開始してください';
+}
+
+function changeVolume(val) {
+  volumeValue.textContent = val + '%';
+  const vol = val / 100;
+  if (gainNode) {
+    gainNode.gain.value = Math.min(vol, 5);
+  }
+  if (boostGainNode) {
+    boostGainNode.gain.value = vol > 5 ? vol / 5 : 1;
+  }
+}
+
+function applyNoiseReduction(val) {
+  const v = Number(val);
+
+  // ハイパス: 0→80Hz, 50→200Hz, 100→400Hz
+  const hpFreq = 80 + (v / 100) * 320;
+  // ローパス: 0→10000Hz, 50→6000Hz, 100→4000Hz
+  const lpFreq = 10000 - (v / 100) * 6000;
+  // 音声ブースト: 0→0dB, 50→6dB, 100→12dB
+  const boostGain1 = (v / 100) * 12;
+  const boostGain2 = (v / 100) * 8;
+
+  if (highpassFilter) {
+    highpassFilter.frequency.value = hpFreq;
+  }
+  if (lowpassFilter) {
+    lowpassFilter.frequency.value = lpFreq;
+  }
+  if (speechBoostFilter) {
+    speechBoostFilter.gain.value = boostGain1;
+  }
+  if (speechBoostFilter2) {
+    speechBoostFilter2.gain.value = boostGain2;
+  }
+}
+
+function changeNoiseReduction(val) {
+  const v = Number(val);
+  if (v === 0) {
+    nrValue.textContent = 'OFF';
+    filterInfo.textContent = 'フィルタなし（原音のまま）';
+  } else if (v <= 30) {
+    nrValue.textContent = '弱';
+    filterInfo.textContent = '軽いノイズ除去';
+  } else if (v <= 70) {
+    nrValue.textContent = '中';
+    filterInfo.textContent = '声を強調 / 低音・高音ノイズをカット';
+  } else {
+    nrValue.textContent = '強';
+    filterInfo.textContent = '声の帯域に集中 / 強力なノイズカット';
+  }
+  applyNoiseReduction(val);
+}
+
+function changeGate(val) {
+  gateThreshold = Number(val);
+  if (gateThreshold === 0) {
+    gateValue.textContent = 'OFF';
+  } else if (gateThreshold <= 30) {
+    gateValue.textContent = '弱';
+  } else if (gateThreshold <= 70) {
+    gateValue.textContent = '中';
+  } else {
+    gateValue.textContent = '強';
+  }
+}
+
+function updateMeter() {
+  if (!analyserNode) return;
+
+  const data = new Uint8Array(analyserNode.frequencyBinCount);
+  analyserNode.getByteFrequencyData(data);
+
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) {
+    sum += data[i];
+  }
+  const avg = sum / data.length;
+  const pct = Math.min(100, (avg / 128) * 100);
+  meterFill.style.width = pct + '%';
+
+  meterRAF = requestAnimationFrame(updateMeter);
+}
+// Service Worker登録
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
