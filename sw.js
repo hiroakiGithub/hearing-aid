@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hearing-aid-v1';
+const CACHE_NAME = 'hearing-aid-v3';
 const ASSETS = [
   './',
   './index.html',
