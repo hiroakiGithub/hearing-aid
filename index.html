@@ -478,6 +478,7 @@ let gateThreshold = 0;
 let selectedDeviceId = '';
 let isRunning = false;
 let tvCutMode = false;
+let wakeLock = null;
 
 const btnStart = document.getElementById('btnStart');
 const btnStop = document.getElementById('btnStop');
@@ -711,6 +712,21 @@ async function startAudio() {
     boostGainNode.connect(analyserNode);
     boostGainNode.connect(audioCtx.destination);
 
+    // 画面スリープ防止
+    await requestWakeLock();
+
+    // AudioContext の停止・再開を監視してステータスに反映
+    audioCtx.onstatechange = () => {
+      if (!isRunning) return;
+      if (audioCtx.state === 'suspended') {
+        statusEl.textContent = '一時停止中';
+        statusEl.className = 'status inactive';
+      } else if (audioCtx.state === 'running') {
+        statusEl.textContent = '動作中';
+        statusEl.className = 'status active';
+      }
+    };
+
     hideError();
     isRunning = true;
     btnStart.disabled = true;
@@ -735,6 +751,8 @@ async function startAudio() {
 }
 
 function stopAudio() {
+  releaseWakeLock();
+
   if (meterRAF) {
     cancelAnimationFrame(meterRAF);
     meterRAF = null;
@@ -885,6 +903,36 @@ function updateMeter() {
 
   meterRAF = requestAnimationFrame(updateMeter);
 }
+// 画面スリープ防止
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch (e) {
+      // 非対応または権限なし
+    }
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
+}
+
+// ページが前面に戻ったとき自動再開
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && isRunning) {
+    await requestWakeLock();
+    if (audioCtx && audioCtx.state === 'suspended') {
+      try {
+        await audioCtx.resume();
+      } catch (e) {}
+    }
+  }
+});
+
 // Service Worker登録
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
