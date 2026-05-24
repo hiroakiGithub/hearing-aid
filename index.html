@@ -166,6 +166,25 @@ input[type="range"]::-webkit-slider-thumb {
   text-align: center;
 }
 
+.btn-tv-cut {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  background: #2a2a4a;
+  color: #aaa;
+  border-radius: 12px;
+  border: 2px solid #3a3a6c;
+  margin-bottom: 4px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.btn-tv-cut.tv-cut-active {
+  background: #4a1a1a;
+  color: #f0a0a0;
+  border-color: #8b2222;
+}
+
 .level-meter {
   width: 100%;
   max-width: 320px;
@@ -384,6 +403,16 @@ input[type="range"]::-webkit-slider-thumb {
   <div class="filter-info">小さな雑音を自動でカットします</div>
 </div>
 
+<!-- テレビ音カット -->
+<div class="control-section">
+  <div class="control-header">
+    <span class="control-label">テレビ音カット</span>
+    <span class="control-value" id="tvCutValue">OFF</span>
+  </div>
+  <button class="btn-tv-cut" id="btnTvCut" onclick="toggleTvCut()">テレビの音をカットする</button>
+  <div class="filter-info">テレビの音をほぼ聞こえなくし、会話に集中します</div>
+</div>
+
 <div class="level-meter">
   <div class="level-label">入力レベル</div>
   <div class="meter-bar">
@@ -449,6 +478,7 @@ let meterRAF = null;
 let gateThreshold = 0;
 let selectedDeviceId = '';
 let isRunning = false;
+let tvCutMode = false;
 
 const btnStart = document.getElementById('btnStart');
 const btnStop = document.getElementById('btnStop');
@@ -664,7 +694,11 @@ async function startAudio() {
     boostGainNode.gain.value = vol > 5 ? vol / 5 : 1;
 
     // フィルタ設定を適用
-    applyNoiseReduction(nrSlider.value);
+    if (tvCutMode) {
+      applyTvCutFilters();
+    } else {
+      applyNoiseReduction(nrSlider.value);
+    }
 
     // チェーン: マイク → ハイパス → ローパス → 音声ブースト1 → 音声ブースト2 → ゲート → コンプレッサー → ゲイン1 → ゲイン2 → 出力
     sourceNode.connect(highpassFilter);
@@ -748,6 +782,7 @@ function changeVolume(val) {
 }
 
 function applyNoiseReduction(val) {
+  if (tvCutMode) return;
   const v = Number(val);
 
   // ハイパス: 0→80Hz, 50→200Hz, 100→400Hz
@@ -772,6 +807,37 @@ function applyNoiseReduction(val) {
   }
 }
 
+function applyTvCutFilters() {
+  // 会話帯域（600Hz〜3200Hz）のみを通す → テレビ音の低音・高音成分をカット
+  if (highpassFilter) highpassFilter.frequency.value = 600;
+  if (lowpassFilter) lowpassFilter.frequency.value = 3200;
+  // 音声をさらに強調
+  if (speechBoostFilter) speechBoostFilter.gain.value = 12;
+  if (speechBoostFilter2) speechBoostFilter2.gain.value = 9;
+  // ノイズゲートを中程度に設定してテレビの断続音も除去
+  gateThreshold = 55;
+}
+
+function toggleTvCut() {
+  tvCutMode = !tvCutMode;
+  const btn = document.getElementById('btnTvCut');
+  const tvCutValue = document.getElementById('tvCutValue');
+
+  if (tvCutMode) {
+    btn.textContent = 'テレビの音をカットする（ON）';
+    btn.classList.add('tv-cut-active');
+    tvCutValue.textContent = 'ON';
+    applyTvCutFilters();
+  } else {
+    btn.textContent = 'テレビの音をカットする';
+    btn.classList.remove('tv-cut-active');
+    tvCutValue.textContent = 'OFF';
+    // スライダーの設定に戻す
+    gateThreshold = Number(gateSlider.value);
+    applyNoiseReduction(nrSlider.value);
+  }
+}
+
 function changeNoiseReduction(val) {
   const v = Number(val);
   if (v === 0) {
@@ -791,6 +857,7 @@ function changeNoiseReduction(val) {
 }
 
 function changeGate(val) {
+  if (tvCutMode) return;
   gateThreshold = Number(val);
   if (gateThreshold === 0) {
     gateValue.textContent = 'OFF';
